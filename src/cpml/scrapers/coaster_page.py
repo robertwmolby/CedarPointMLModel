@@ -19,6 +19,7 @@ class CoasterPage:
     design: str
     status: str
 
+    country: Optional[str] = None
     manufacturer: Optional[str] = None
     model: Optional[str] = None
     length: Optional[float] = None        # meters (or your unit)

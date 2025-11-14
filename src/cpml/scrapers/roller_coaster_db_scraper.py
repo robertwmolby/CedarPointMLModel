@@ -1,10 +1,30 @@
 # crowd_level_scraper.py
+import time
 from datetime import datetime
-
+from warnings import catch_warnings
+import csv
 import psycopg2
 import requests
 from bs4 import BeautifulSoup
 from cpml.scrapers.coaster_page import CoasterPage
+from pathlib import Path
+import os
+from psycopg2.extensions import connection as PGConnection
+
+def get_db_connection() -> PGConnection | None:
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT", "5432"),
+            database=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+        )
+        return conn
+
+    except psycopg2.Error as e:
+        print(f"Error connecting to PostgreSQL database: {e}")
+        return None
 
 def create_section_map(soup: BeautifulSoup):
     section_map = {}
@@ -39,6 +59,11 @@ def populate_details_from_page(coaster_page: CoasterPage):
     if (response.status_code == 200):
         soup = BeautifulSoup(response.text, 'lxml')
         # labels are in anchor tags here.  First can be ignored (is "Roller Coaster")    #feature > ul:nth-child(3)
+
+        country: str = soup.select_one("#feature > div a:last-of-type").get_text(strip=True)
+        print(f"{coaster_page.name} is in {country}")
+        coaster_page.country = country
+
 
 
         # manufacturer, model, submodel are 3 anchor tags in the following
@@ -129,14 +154,6 @@ def populate_details_from_page(coaster_page: CoasterPage):
             coaster_page.model = model
 
 
-
-
-
-
-
-
-
-
 def main():
     print("start")
 
@@ -155,20 +172,82 @@ def main():
                 # ignore table header
                 if len(table_row.find_all("td")) > 0:
                     coaster_page = CoasterPage.from_table_row(table_row)
-                    if coaster_page.name != 'unknown' and coaster_page.status == 'Operating':
+                    if coaster_page.amusement_park is None:
+                        print(f"Skipping coaster missing amusement park. {coaster_page.name}")
+                        break
+                    elif coaster_page.name == 'unknown':
+                        print(f"Skipping coaster page where name is unknown.  Id is {coaster_page.id}.")
+                    elif coaster_page.status != 'Operating':
+                        print(f"Skipping coaster page {coaster_page.name} where status is not operating.  Id is {coaster_page.id}.")
+                    else:
                         populate_details_from_page(coaster_page)
                         coaster_pages.append(coaster_page)
         else:
             print(f"Failed to fetch data. Status code: {response.status_code}.  url: {url}")
             more_pages_exists = False
 
-    conn = psycopg2.connect(
-        host='cp-ai.cbsscwgeqp5j.us-east-2.rds.amazonaws.com',
-        port=5432,
-        database='postgres',
-        user='postgres',
-        password='CedarP0int'
-    )
+    # Dump scraped data to CSV as a backup / alternative to DB
+
+    # Resolve project root based on this file's location
+    project_root = Path(__file__).resolve().parents[3]
+    export_dir = project_root / "storage" / "scraper"
+    export_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = export_dir / "roller_coasters_scraped.csv"
+    print(f"Writing {len(coaster_pages)} records to {csv_path}")
+
+    fieldnames = [
+        "id",
+        "name",
+        "url",
+        "amusement_park",
+        "coaster_type",
+        "design",
+        "status",
+        "manufacturer",
+        "model",
+        "length",
+        "height",
+        "drop",
+        "inversion_count",
+        "speed",
+        "vertical_angle",
+        "duration",
+        "restraints",
+        "g_force",
+        "intensity",
+        "country",
+    ]
+
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for cp in coaster_pages:
+            writer.writerow({
+                "id": cp.id,
+                "name": cp.name,
+                "url": cp.url,
+                "amusement_park": cp.amusement_park,
+                "coaster_type": cp.coaster_type,
+                "design": cp.design,
+                "status": cp.status,
+                "manufacturer": cp.manufacturer,
+                "model": cp.model,
+                "length": cp.length,
+                "height": cp.height,
+                "drop": cp.drop,
+                "inversion_count": cp.inversion_count,
+                "speed": cp.speed,
+                "vertical_angle": cp.vertical_angle,
+                "duration": cp.duration,
+                "restraints": cp.restraints,
+                "g_force": cp.g_force,
+                "intensity": cp.intensity,
+                "country": cp.country,
+            })
+
+    conn = get_db_connection()
 
     print("records loaded.  beginning inserts.")
     cursor = conn.cursor();
@@ -176,35 +255,55 @@ def main():
           INSERT INTO roller_coasters (id, name, url, amusement_park, type, design, status, 
                                        manufacturer, model, length, height, drop, 
                                        inversion_count, speed, vertical_angle, duration, 
-                                       restraints, g_force, intensity) 
+                                       restraints, g_force, intensity, country) 
           VALUES (%s, %s, %s, %s, %s, %s, %s, 
                   %s, %s, %s, %s, %s, 
                   %s, %s, %s, %s, 
-                  %s, %s, %s) 
+                  %s, %s, %s, %s) 
           """
     for coaster_page in coaster_pages:
-        cursor.execute(sql, (
-            coaster_page.id,
-            coaster_page.name,
-            coaster_page.url,
-            coaster_page.amusement_park,
-            coaster_page.coaster_type,
-            coaster_page.design,
-            coaster_page.status,
-            coaster_page.manufacturer,
-            coaster_page.model,
-            coaster_page.length,
-            coaster_page.height,
-            coaster_page.drop,
-            coaster_page.inversion_count,
-            coaster_page.speed,
-            coaster_page.vertical_angle,
-            coaster_page.duration,
-            coaster_page.restraints,
-            coaster_page.g_force,
-            coaster_page.intensity
-        ))
-        conn.commit()
+        try:
+            cursor.execute(sql, (
+                coaster_page.id,
+                coaster_page.name,
+                coaster_page.url,
+                coaster_page.amusement_park,
+                coaster_page.coaster_type,
+                coaster_page.design,
+                coaster_page.status,
+                coaster_page.manufacturer,
+                coaster_page.model,
+                coaster_page.length,
+                coaster_page.height,
+                coaster_page.drop,
+                coaster_page.inversion_count,
+                coaster_page.speed,
+                coaster_page.vertical_angle,
+                coaster_page.duration,
+                coaster_page.restraints,
+                coaster_page.g_force,
+                coaster_page.intensity,
+                coaster_page.country
+            ))
+            conn.commit()
+        except Exception as e:
+            print(f"Error occurred in db work.  Message was {e}.  Sleeping for 10 seconds.")
+            time.sleep(10)
+            while True:
+                try:
+                    try:
+                        conn.close()
+                    except Exception as e:
+                        pass
+                    print('attempting to reconnect to database.')
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    break
+                except Exception as e:
+                    print(f"Error occurred connecting to db.  Will retry after 10 seconds.")
+                    time.sleep(10)
+                    continue
+
 
 if __name__ == "__main__":
     main()
