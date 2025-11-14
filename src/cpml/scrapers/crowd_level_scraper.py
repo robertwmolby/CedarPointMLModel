@@ -8,6 +8,8 @@ import sqlite3
 import re
 import psycopg2
 import params
+import os
+from psycopg2.extensions import connection as PGConnection
 
 DB_STRING_PLACEHOLDER = '%s'  # for PostgreSQL
 DB_INTEGER_PLACEHOLDER = '%s::integer'  # for PostgreSQL
@@ -15,19 +17,26 @@ DB_NUMERIC_PLACEHOLDER = '%s::numeric'  # for PostgreSQL
 DB_DATE_PLACEHOLDER = '%s::date'  # for PostgreSQL
 # DB_PLACEHOLDER = '?'  # for SqlLite
 
+def get_db_connection() -> PGConnection | None:
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT", "5432"),
+            database=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+        )
+        return conn
+
+    except psycopg2.Error as e:
+        print(f"Error connecting to PostgreSQL database: {e}")
+        return None
 
 
 def main():
     # local sqllite database
     #conn = sqlite3.connect('../cp.db')
-    # aws postgres database  jdbc:postgresql://cp-ai.cbsscwgeqp5j.us-east-2.rds.amazonaws.com:5432/postgres
-    conn = psycopg2.connect(
-        host='cp-ai.cbsscwgeqp5j.us-east-2.rds.amazonaws.com',
-        port=5432,
-        database='postgres',
-        user='postgres',
-        password='CedarP0int'
-    )
+    conn = get_db_connection()
 
     cursor = conn.cursor();
     cursor.execute('''
