@@ -117,20 +117,13 @@ def predict(body: PredictIn = Body(default=None)):
     # We’ll reuse predictor internals to avoid drift:
     try:
         # Build DF then align to model features to get the exact inputs consumed
-        print(1)
         df = PREDICTOR._build_df(req)                 # dataclass -> 1-row DF
-        print(2)
         PREDICTOR._align_features(df)                 # add/drop/reorder to model expectation
-        print(3)
         feature_names = list(PREDICTOR.model_feature_names())
-        print(4)
-        print(5)
 
         # Do the prediction using the predictor path (it re-builds df, but that’s fine)
         try:
-            print(6)
             y = PREDICTOR.predict_from_request(req)
-            print(7)
         except ParkClosedError as pe:
             raise HTTPException(422, str(pe))
         metrics = {k: _py(v) for k, v in PREDICTOR.model_metrics().items()}

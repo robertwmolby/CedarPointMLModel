@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cp-api-deployment
+  labels:
+    app: cp-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cp-api
+  template:
+    metadata:
+      labels:
+        app: cp-api
+    spec:
+      containers:
+        - name: cp-api
+          image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/cedarpoint-api:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CP_STORAGE_DIR
+              value: /app/storage
+            - name: CP_LATEST_SUB
+              value: artifacts/latest
+            # turn off park-closed validation if you want:
+            # - name: CP_VALIDATE_OPEN
+            #   value: "0"
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cp-api-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: cp-api
+  ports:
+    - port: 80
+      targetPort: 8000
