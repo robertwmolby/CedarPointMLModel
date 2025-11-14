@@ -1,18 +1,23 @@
-import psycopg2
 import pandas as pd
+import os
+import psycopg2
+from psycopg2.extensions import connection as PGConnection
 
-def get_db_connection():
+def get_db_connection() -> PGConnection | None:
     try:
-        return psycopg2.connect(
-            host="cp-ai.cbsscwgeqp5j.us-east-2.rds.amazonaws.com",
-            port=5432,
-            database="postgres",
-            user="postgres",
-            password="CedarP0int"
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT", "5432"),
+            database=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
         )
+        return conn
+
     except psycopg2.Error as e:
-        print(f"Error connecting to PostgreSQL: {e}")
+        print(f"Error connecting to PostgreSQL database: {e}")
         return None
+
 
 
 def load_table(name: str) -> pd.DataFrame:
