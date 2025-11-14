@@ -1,0 +1,38 @@
+{
+  "model_class": "CPXGBoostModel",
+  "model_name": "xgboost",
+  "created_at": 1763078096.1038501,
+  "feature_names": [
+    "actual_temp",
+    "actual_rain",
+    "forecast_temp",
+    "forecast_rain",
+    "month",
+    "day",
+    "labor_day",
+    "memorial_day",
+    "fourth_of_july",
+    "fathers_day",
+    "mothers_day",
+    "hallowweekend",
+    "school_season",
+    "opening_day",
+    "closing_day",
+    "coaster_mania",
+    "day_of_week",
+    "season_week"
+  ],
+  "metrics": {
+    "r2": 0.49316749952558225,
+    "rmse": 22.306151461226065
+  },
+  "serializer": "xgboost_json",
+  "lib_versions": {
+    "python": "3.12.7",
+    "numpy": "2.1.3",
+    "pandas": "2.3.1",
+    "xgboost": "3.0.5",
+    "lightgbm": "4.6.0",
+    "tensorflow": "2.19.0"
+  }
+}
