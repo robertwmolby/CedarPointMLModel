@@ -86,7 +86,7 @@ These APIs are consumed by a separate **Spring Boot application**, which
 provides orchestration and external interface layers.
 
 -   **Spring Boot Swagger UI:**\
-    http://a3edcc49fa0874231a028402c7ba9ebf-1948375705.us-east-2.elb.amazonaws.com/swagger-ui/index.html#/Recommendations/findRecommendations
+    http://a3edcc49fa0874231a028402c7ba9ebf-41972715.us-east-2.elb.amazonaws.com/swagger-ui/index.html
 
 -   **Spring Boot GitHub Repository:**\
     https://github.com/robertwmolby/RollerCoasterRecommender.git
