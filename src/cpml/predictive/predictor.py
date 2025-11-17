@@ -69,6 +69,8 @@ class CPPredictor:
         Predict from a fully-populated PredictionRequest.
         Returns a scalar float crowd level.
         """
+        if not is_open(request.prediction_date):
+            raise ParkClosedError(f"Park is closed on {request.prediction_date.isoformat()}")
         self._ensure_model_loaded()
 
         df = self._build_df(request)
