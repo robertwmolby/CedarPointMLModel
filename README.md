@@ -66,6 +66,9 @@ The resultant and selected model has been encapsulated along with a Flask API an
 
 The third module provides a roller-coaster recommendation system
 derived from global roller-coaster metadata and user rating data.
+Beyond simple roller coaster similarities, information regarding the 
+countries a user is in and the average rating are factored into
+recommendations.  
 
 It supports:
 
@@ -74,8 +77,19 @@ It supports:
 -   Generating personalized recommendations
 -   Providing coaster similarity lookups
 -   Training and exporting recommendation models
+-   Boosting and adjusting recommendation values by taking similarity values and increasing their value based on
+  - country:  This is to allow recommendations to prioritize countries which the user can readily travel to
+  - rating: This is to ensure that "good" coasters are significantly boosted relative to coasters that are similar in statistical measure but are not considered enjoyable by users who have ridden them.
 
 This functionality has been exposed as an API built with Flask which is deployed to AWS EKS in the form of Docker images.  Details of the endpoints created can currently be found here:  http://ac3a45cc0862c4debaeed73d6650680d-1292001656.us-east-2.elb.amazonaws.com/docs
+
+### Core Modules
+Several core modules exist inside the roller coaster recommendation engine as follows:
+- cpml.recommendation.data_access: Fetches data from database into preliminary dataframes
+- cpml.recommendation.preprocess: handles manipulation of desired features for usage and scaling
+- cpml.recommendation.recommend: performs similarity analysis and subsequent boosting.
+- cpm.recommendation.recommendation_engine: entry point for general functionality.  Calls data_access, preprocess, recommend and subsequently sorts out information for usage by callers
+- cpml.recommendation.api.py Flask API
 
 ### Flask API Layer
 
